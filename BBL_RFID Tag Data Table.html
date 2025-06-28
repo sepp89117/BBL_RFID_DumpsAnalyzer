@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        html {            
+            font-family: Verdana, Arial, sans-serif;
+            font-size: 0.8em;
+        }
+
+        .modern-table {
+            border-collapse: collapse;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-align: left;
+            overflow: visible;
+            border: 1px solid lightgray;
+            cursor: default;
+        }
+
+        .modern-table th {
+            font-weight: 600;
+            background-color: #C1E2FF;
+            position: sticky;
+            top: 0;
+            padding: 10px 20px 10px 4px;
+        }
+
+        .modern-table td {
+            padding: 2px 4px;
+        }
+
+        .modern-table tbody tr {
+            background-color: white;
+        }
+
+        .modern-table tbody tr:not(:last-child) {
+            border-bottom: 1px solid #dfdfdf;
+        }
+
+        .modern-table tbody tr:hover {
+            background-color: #fffbe7;
+        }
+
+        .modern-table tr th:last-child,
+        .modern-table tr td:last-child {
+            padding-right: 10px;
+        }
+
+        .fld-btn {
+            cursor: pointer;
+            width: 17px;
+            height: 17px;
+            padding: 0px;
+            line-height: 0;
+            border-radius: 0px;
+            border: 1px solid #c8c6c4;
+            background: #fff;
+            font-size: 12pt;
+            margin: 0 !important;
+        }
+
+        code {
+            font-size: 1.2em;
+            border-radius: .25rem;
+            background-color: #ececec;
+            font-weight: 500;
+            padding: .15rem .3rem;
+        }
+    </style>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("jsonFile").addEventListener("change", function (event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        renderTable(data);
+
+                        // apped filter
+                        let noHideClasses = [];
+                        let colTypes = ['default', 'default', 'default', 'default', 'default', 'default', 'default', 'default', 'default', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'default', 'number', 'default', 'number', 'default', 'default', 'number', 'number', 'number', 'default', 'default', 'default', 'number', 'number'];
+                        $table = $('#vTable');
+                        $table.tableFilter(colTypes, noHideClasses);
+                    } catch (err) {
+                        alert("Error while parsing JSON file.");
+                        console.error(err);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        });
+
+
+        function renderTable(data) {
+            const container = document.getElementById("tableContainer");
+            container.innerHTML = "";
+
+            if (!Array.isArray(data) || data.length === 0) {
+                container.textContent = "No data found.";
+                return;
+            }
+
+            // Alle Schlüssel aus erstem Objekt für Spaltenüberschriften
+            const columns = Object.keys(data[0]);
+
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const trHead = document.createElement("tr");
+
+            const columnState = {}; // Zustand: eingeklappt oder nicht
+
+            columns.forEach((col, index) => {
+                const th = document.createElement("th");
+                const label = document.createElement("span");
+                label.textContent = col;
+
+                const toggleBtn = document.createElement("input");
+                toggleBtn.type = "button";
+                toggleBtn.value = "⇔";
+                toggleBtn.classList.add("fld-btn");
+                toggleBtn.style.position = "absolute";
+                toggleBtn.style.right = "0px";
+                toggleBtn.style.top = "0px";
+
+                toggleBtn.addEventListener("click", () => {
+                    columnState[index] = !columnState[index];
+                    toggleColumn(index, columnState[index]);
+                });
+
+                th.appendChild(label);
+                th.appendChild(toggleBtn);
+                trHead.appendChild(th);
+            });
+
+            thead.appendChild(trHead);
+            table.appendChild(thead);
+
+            const tbody = document.createElement("tbody");
+
+            data.forEach(entry => {
+                const tr = document.createElement("tr");
+                columns.forEach(col => {
+                    const td = document.createElement("td");
+                    if (col === "color_rgba" || col === "second_color_rgba") {
+                        td.style.backgroundColor = entry[col];
+                        td.title = entry[col];
+                    } else {
+                        td.textContent = entry[col] != null ? entry[col] : "";
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+            table.classList.add("modern-table");
+            table.id = "vTable";
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        function toggleColumn(colIndex, collapse) {
+            const table = document.querySelector("table");
+            if (!table) return;
+
+            const rows = table.rows;
+            for (let row of rows) {
+                const cell = row.cells[colIndex];
+                if (cell) {
+                    if (collapse) {
+                        cell.dataset.originalWidth = cell.offsetWidth;
+                        cell.style.maxWidth = "17px";
+                        cell.style.overflow = "hidden";
+                        cell.style.whiteSpace = "nowrap";
+                        cell.style.textOverflow = "ellipsis";
+                    } else {
+                        cell.style.maxWidth = "";
+                        cell.style.overflow = "";
+                        cell.style.whiteSpace = "";
+                        cell.style.textOverflow = "";
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script>
+        (function ($) {
+            $.fn.tableFilter = function (columnDataTypes, noHideRowClasses) {
+                var styles = `
+                    .flt-btn-div {
+                        position: absolute;
+                        right: 0px;
+                        bottom: 2px;
+                        width: 17px;
+                        height: 17px;
+                    }
+
+                    .flt-btn {
+                        cursor: pointer;
+                        width: 17px;
+                        height: 17px;
+                        padding: 0px;
+                        line-height: 0;
+                        border-radius: 0px;
+                        border: 1px solid #c8c6c4;
+                        background: #fff;
+                        font-size: 12pt;
+                        margin: 0 !important;
+                    }
+
+                    .flt-btn.active {
+                        background: #c8c6c4;
+                    }
+
+                    .flt-btn:active {
+                        background: #c8c6c4;
+                    }
+
+                    .flt-men {
+                        display: flex;
+                        position: absolute;
+                        background: #fff;
+                        border: 1px solid #c8c6c4;
+                        padding: 10px;
+                        z-index: 1000;
+                        flex-direction: column;
+                        width: 242px;
+                        top: 18px;
+                        font-size: 10pt;
+                        font-weight: normal;
+                        text-align: left;
+                        line-height: 1;
+                        min-height: 215px;
+                        min-width: 215px;
+                        max-width: 450px;
+                        max-height: 550px;
+                        cursor: default;
+                        resize: both;
+                        overflow: hidden;
+                    }
+                    
+                    .inner-btn {
+                        cursor: pointer;
+                        padding: 7px;
+                        margin-bottom: 6px;
+                        border: 1px solid #ddd;
+                        background: #eee;
+                    }
+
+                    .inner-btn:hover {
+                        background: #e9f5ee;
+                        outline: 1px solid #00d778;
+                    }
+
+                    .search-input {
+                        margin: 5px 0 !important;
+                    }
+
+                    .cb-input {
+                        margin: 5px 0 5px 5px !important;
+                    }
+
+                    .select-div {
+                        flex-grow: 1;
+                        background: #fff;
+                        overflow: auto;
+                        padding: 3px 0px 3px 6px;
+                        border: 1px solid #ddd;
+                    }
+
+                    .cb-label {
+                        width: 100%;
+                        display: block;
+                        white-space: nowrap;
+                    }
+
+                    .bottom-btns {
+                        display: flex;
+                        justify-content: end;
+                        margin: 10px 0 5px 0;
+                    }
+                    
+                    .bottom-btn {
+                        cursor: pointer;
+                        height: 26px;
+                        padding: 3px;
+                        background: #eee;
+                        border: 1px solid #ddd;
+                        margin-left: 6px;
+                        width: 81px;
+                    }
+
+                    .bottom-btn:hover {
+                        background: #e5f1fb;
+                        outline: 1px solid #0078d7;
+                    }
+
+                    .extra-inputs {
+                        display: grid;
+                        margin-top: 5px;
+                    }
+
+                    .no-results {
+                        outline: 3px double #ff7f7f;
+                        border: 2px solid red;
+                        border-radius: 2px;
+                    }
+                `
+
+                /* var captions = {
+                    strings: {
+                        search: 'Suchen',
+                        select_all: '(Alles auswählen)',
+                        select_empty: '(Leere)',
+                        ok: 'OK',
+                        cancel: 'Abbrechen'
+                    },
+                    default: {
+                        asc: 'Von A bis Z sortieren',
+                        desc: 'Von Z bis A sortieren',
+                    },
+                    number: {
+                        asc: 'Von Klein nach Groß sortieren',
+                        desc: 'Von Groß nach Klein sortieren',
+                    },
+                    date: {
+                        asc: 'Von Alt nach Neu sortieren',
+                        desc: 'Von Neu nach Alt sortieren',
+                    }
+                }; */
+                var captions = {
+                    strings: {
+                        search: 'Search',
+                        select_all: '(Select all)',
+                        select_empty: '(Empty)',
+                        ok: 'OK',
+                        cancel: 'Cancel'
+                    },
+                    default: {
+                        asc: 'Sort A to Z',
+                        desc: 'Sort Z to A',
+                    },
+                    number: {
+                        asc: 'Sort low to high',
+                        desc: 'Sort high to low',
+                    },
+                    date: {
+                        asc: 'Sort old to new',
+                        desc: 'Sort new to old',
+                    }
+                };
+
+
+                var instance = null;
+
+                // columnDataTypes ['none' = no filter, null = auto detect, 'default', 'number', 'date']
+                // noHideRowClasses ['example-class', 'nested']
+
+                var stlSht = document.getElementById("table-flt-css");
+                if (stlSht === null) {
+                    stlSht = document.createElement("style");
+                    stlSht.id = "table-flt-css";
+                    stlSht.textContent = styles;
+                    document.head.appendChild(stlSht);
+                }
+
+                function getCellMatrix($table) {
+                    let matrix = [];
+                    let maxCols = 0;
+                    $table.find('> tr, > thead > tr, > tbody > tr').each((rowIndex, row) => {
+                        let colIndex = 0;
+                        $(row).children('th, td').each((_, cell) => {
+                            while (matrix[rowIndex] && matrix[rowIndex][colIndex]) {
+                                colIndex++;
+                            }
+
+                            if (colIndex + 1 > maxCols)
+                                maxCols = colIndex + 1;
+
+                            var $cell = $(cell);
+
+                            let rowspan = $cell.attr('rowspan') || "";
+                            if (rowspan.endsWith("%") || rowspan === "")
+                                rowspan = 1;
+                            else
+                                rowspan = parseInt(rowspan);
+
+                            let colspan = $cell.attr('colspan') || "";
+                            if (colspan.endsWith("%"))
+                                colspan = maxCols;
+                            else if (colspan === "")
+                                colspan = 1;
+                            else
+                                colspan = parseInt(colspan);
+
+                            for (let r = 0; r < rowspan; r++) {
+                                if (!matrix[rowIndex + r]) {
+                                    matrix[rowIndex + r] = [];
+                                }
+                                matrix[rowIndex + r][colIndex] = $cell;
+                                for (let c = 1; c < colspan; c++) {
+                                    matrix[rowIndex + r][colIndex + c] = $('<td></td>');
+                                }
+                            }
+                            colIndex += colspan;
+                        });
+                    });
+                    return matrix;
+                }
+
+                function detectDT(data) {
+                    if (data.every(d => isDate(d))) return "date";
+                    if (data.every(d => !isNaN(parseFloatCustom(d)))) return "number";
+                    return "default";
+                }
+
+                function isDate(value) {
+                    return /^\d{2}\.\d{2}\.\d{4}$/.test(value) ||   // DD.MM.YYYY
+                        /^\d{4}-\d{2}-\d{2}$/.test(value) ||   // YYYY-MM-DD
+                        /^\d{2}\/\d{2}\/\d{4}$/.test(value) || // DD/MM/YYYY
+                        /^\d{2}-\d{2}-\d{4}$/.test(value) ||   // MM-DD-YYYY
+                        /^\d{4}\.\d{2}\.\d{2}$/.test(value);   // YYYY.MM.DD
+                }
+
+                function parseDate(value) {
+                    if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) { // DD.MM.YYYY
+                        let parts = value.split('.');
+                        return new Date(parts[2], parts[1] - 1, parts[0]);
+                    } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) { // YYYY-MM-DD
+                        return new Date(value);
+                    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) { // DD/MM/YYYY
+                        let parts = value.split('/');
+                        return new Date(parts[2], parts[1] - 1, parts[0]);
+                    } else if (/^\d{2}-\d{2}-\d{4}$/.test(value)) { // MM-DD-YYYY
+                        let parts = value.split('-');
+                        return new Date(parts[2], parts[0] - 1, parts[1]);
+                    } else if (/^\d{4}\.\d{2}\.\d{2}$/.test(value)) { // YYYY.MM.DD
+                        let parts = value.split('.');
+                        return new Date(parts[0], parts[1] - 1, parts[2]);
+                    }
+                    return null;
+                }
+
+                function dtv(date) {
+                    date = new Date(date);
+                    if (isNaN(date.getDate())) return "";
+                    return date.getFullYear() + "-" + ("0" + (date.getMonth() + 1)).slice(-2) + "-" + ("0" + date.getDate()).slice(-2);
+                }
+
+                function sortTbl($table, columnIndex, type, ascending) {
+                    var thead = $table.find('> thead');
+                    var th_rows = thead.find('> tr').get();
+                    var tbody = $table.find('> tbody');
+                    var rows = tbody.find('> tr').get();
+                    const cellMatrix = getCellMatrix($table);
+                    let groupedRows = [];
+                    let currentGroup = [];
+
+                    rows.forEach(row => {
+                        $row = $(row);
+                        var hasNoHideClass = noHideRowClasses.some(className => className !== "" && $row.hasClass(className));
+                        if (hasNoHideClass) {
+                            currentGroup.push(row);
+                        } else {
+                            if (currentGroup.length) {
+                                groupedRows.push(currentGroup);
+                                currentGroup = [];
+                            }
+                            groupedRows.push(row);
+                        }
+                    });
+
+                    if (currentGroup.length) {
+                        groupedRows.push(currentGroup);
+                    }
+
+                    groupedRows.sort((a, b) => {
+                        let rowA = Array.isArray(a) ? a[0] : a;
+                        let rowB = Array.isArray(b) ? b[0] : b;
+
+                        var rowIndexA = rows.indexOf(rowA) + th_rows.length;
+                        var rowIndexB = rows.indexOf(rowB) + th_rows.length;
+
+                        var valA = cellMatrix[rowIndexA][columnIndex].text().trim();
+                        var valB = cellMatrix[rowIndexB][columnIndex].text().trim();
+
+                        if (type === "number") {
+                            valA = parseFloatCustom(valA) || 0;
+                            valB = parseFloatCustom(valB) || 0;
+                        } else if (type === "date") {
+                            let _dateA = parseDate(valA);
+                            let _dateB = parseDate(valB);
+                            valA = _dateA ? _dateA.getTime() : 0;
+                            valB = _dateB ? _dateB.getTime() : 0;
+                        }
+
+                        return valA === valB ? 0 : (valA > valB ? 1 : -1) * (ascending ? 1 : -1);
+                    });
+
+                    tbody.empty();
+                    groupedRows.forEach(group => {
+                        if (Array.isArray(group)) {
+                            group.forEach(row => tbody.append(row));
+                        } else {
+                            tbody.append(group);
+                        }
+                    });
+                }
+
+                function fltBySel($table, columnIndex) {
+                    var $th = $table.find('> thead > tr > th').eq(columnIndex);
+                    var $selectAll = $th.find('.select-div input[type=checkbox]').first();
+                    var $checkboxes = $th.find('.select-div input[type=checkbox]').not($selectAll);
+
+                    var checkedValues = $checkboxes.filter(':checked').map(function () {
+                        let cb_value = $(this).parent().text().trim();
+                        if (cb_value === captions['strings'].select_empty)
+                            cb_value = "";
+                        return cb_value;
+                    }).get();
+
+                    if (checkedValues.length < $checkboxes.length)
+                        instance.activeFilters[columnIndex] = checkedValues;
+                    else
+                        delete instance.activeFilters[columnIndex];
+
+                    var thead = $table.find('> thead');
+                    var th_rows = thead.find('> tr').get();
+
+                    var tbody = $table.find('> tbody');
+                    var rows = tbody.find('> tr').get();
+
+                    const cellMatrix = getCellMatrix($table);
+
+                    instance.onFilter.call();
+
+                    $(rows).each(function (rowIndex) {
+                        var isVisible = true;
+                        $row = $(this);
+
+                        var hasNoHideClass = noHideRowClasses.some(className => className !== "" && $row.hasClass(className));
+
+                        if (!hasNoHideClass) {
+                            Object.keys(instance.activeFilters).forEach(colIndex => {
+                                var cellText2 = cellMatrix[rowIndex + th_rows.length][colIndex].text().trim();
+                                if (!instance.activeFilters[colIndex].includes(cellText2)) {
+                                    isVisible = false;
+                                }
+                            });
+                        }
+
+                        $row.toggle(isVisible);
+                    });
+
+                    var allChecked = $checkboxes.length === $checkboxes.filter(':checked').length;
+                    $selectAll.prop('checked', allChecked);
+
+                    updFltMens($table, columnIndex);
+                    updFltBtn($th, checkedValues.length < $checkboxes.length);
+
+                    instance.onFiltered.call();
+                }
+
+                function updSelectAll($th) {
+                    var $selectAll = $th.find('.select-div input[type=checkbox]').first();
+                    var cbs = $th.find('.select-div input[type=checkbox]').not($selectAll);
+                    var checked_cbs = cbs.filter(':checked');
+                    var allChecked = cbs.length === checked_cbs.length;
+                    $selectAll.prop('checked', allChecked);
+                }
+
+                function updFltBtn($th, isFiltered) {
+                    var $fltBtn = $th.find('.flt-btn');
+                    $fltBtn.val(isFiltered ? '\u29E9' : '\u25BE');
+                }
+
+                function updFltMens($table, columnIndex) {
+                    var $tbody = $table.find('> tbody');
+                    var visibleRows = new Set($tbody.find('> tr:visible').get());
+
+                    $table.find('> thead > th').each(function (index) {
+                        var colIndex = index + 1;
+                        if (columnIndex === index) return;
+
+                        var colDat = new Set();
+
+                        $tbody.find(`td:nth-child(${colIndex})`).each(function () {
+                            colDat.add($(this).text().trim());
+                        });
+
+                        var uniqueValues = Array.from(colDat).sort();
+                        var $fltMen_div = $(this).find('.flt-men');
+                        var $select_div = $fltMen_div.find('.select-div');
+
+                        var visibleValues = new Set();
+                        visibleRows.forEach(row => {
+                            let cell = $(row).find(`td:nth-child(${colIndex})`).text().trim();
+                            if (cell === captions['strings'].select_empty) cell = "";
+                            visibleValues.add(cell);
+                        });
+
+                        uniqueValues.forEach(value => {
+                            var isChecked = visibleValues.has(value);
+
+                            var $checkbox_lbl = $select_div.find('.cb-label').filter(function () {
+                                let cb_value = $(this).text().trim();
+                                if (cb_value === captions['strings'].select_empty) cb_value = "";
+                                return cb_value === value;
+                            });
+
+                            if ($checkbox_lbl.find('input').is(':checked'))
+                                $checkbox_lbl.find('input').prop('disabled', !isChecked);
+                        });
+                    });
+                }
+
+                function parseFloatCustom(value) {
+                    if (typeof value !== 'string') return NaN;
+
+                    let normalized = value.replace(/[\s,.](?=\d{3})/g, '');
+                    normalized = normalized.replace(/[,\.](?=\d*$)/, '.');
+
+                    return parseFloat(normalized);
+                }
+
+                $(document).click(function (e) {
+                    let $fltMen_div = $('.flt-men');
+                    if (!$fltMen_div.toArray().some(el => el === e.target) && !$fltMen_div.has(e.target).length) {
+                        $('.flt-btn').removeClass('active');
+                        $fltMen_div.hide();
+                    }
+                });
+
+                return this.each(function () {
+                    var $table = $(this);
+
+                    // Überprüfen, ob bereits eine Instanz existiert
+                    if ($table.data('tableFilter')) {
+                        instance = $table.data('tableFilter');
+                        $table.find('> thead > tr > th .flt-btn-div').remove();
+                    } else {
+                        instance = new TableFilter($table);
+                        $table.data('tableFilter', instance);
+                    }
+
+                    columnDataTypes = $.extend([], $.fn.tableFilter.columnDataTypes, columnDataTypes);
+                    noHideRowClasses = $.extend([], $.fn.tableFilter.noHideRowClasses, noHideRowClasses);
+
+                    const cellMatrix = getCellMatrix($table);
+                    const columnCount = cellMatrix[0].length;
+
+                    for (let colIndex = 0; colIndex < columnCount; colIndex++) {
+                        let colDat = [];
+                        for (let rowIndex = 1; rowIndex < cellMatrix.length; rowIndex++) {
+                            let $cell = cellMatrix[rowIndex][colIndex];
+                            if ($cell && $cell.is('td')) {
+                                colDat.push($cell.text().trim());
+                            }
+                        }
+
+                        if (colDat.length === 0 || colDat.every(d => d === ""))
+                            continue;
+
+                        const dt = columnDataTypes[colIndex] ?? detectDT(colDat);
+                        if (dt === "none") continue;
+
+                        const $th = cellMatrix[0][colIndex];
+
+                        var uniqueValues = [...new Set(colDat)].sort();
+
+                        $th.css({
+                            paddingRight: '20px'
+                        });
+                        if (window.getComputedStyle($th[0]).position !== 'sticky')
+                            $th.css('position', 'relative');
+
+                        const $fltBtn_input = $('<input type="button" class="flt-btn" value="&#9662;">');
+                        const $fltMen_div = $('<div class="flt-men"></div>').appendTo($th);
+
+                        const $sortAsc_div = $('<div class="inner-btn">' + captions[dt].asc + '</div>').click(function () {
+                            sortTbl($table, colIndex, dt, true);
+                        });
+
+                        const $sortDesc_div = $('<div class="inner-btn">' + captions[dt].desc + '</div>').click(function () {
+                            sortTbl($table, colIndex, dt, false);
+                        });
+
+                        $fltMen_div.append($sortAsc_div, $sortDesc_div);
+
+                        const $extraInputs_div = $('<div class="extra-inputs"></div>');
+                        if (dt === "number") {
+                            let floatObjects = uniqueValues
+                                .map(val => parseFloatCustom(val))
+                                .filter(num => num !== null && num !== undefined && !Number.isNaN(num));
+                            let minValue = Math.min(...floatObjects);
+                            let maxValue = Math.max(...floatObjects);
+
+                            const $minInput_lbl = $('<label>Min: <input type="number" placeholder="Min" style="margin-left: 3px;"></label>');
+                            const $maxInput_lbl = $('<label>Max: <input type="number" placeholder="Max"></label>');
+                            const $minInput = $minInput_lbl.find('input');
+                            const $maxInput = $maxInput_lbl.find('input');
+
+                            $minInput.val(minValue);
+                            $maxInput.val(maxValue);
+
+                            $minInput.add($maxInput).on('input', function () {
+                                function validateInput($input) {
+                                    const val = parseFloatCustom($input.val());
+                                    const isValid = !isNaN(val);
+
+                                    if (isValid) {
+                                        $input[0].setCustomValidity('');
+                                        $input.removeClass('invalid-input');
+                                    } else {
+                                        $input[0].setCustomValidity('Not a Number!');
+                                        $input.addClass('invalid-input');
+                                    }
+
+                                    return isValid ? val : null;
+                                }
+
+                                const minInputVal = validateInput($minInput);
+                                const maxInputVal = validateInput($maxInput);
+
+                                const minVal = minInputVal ?? 0;
+                                const maxVal = maxInputVal ?? Infinity;
+
+                                $cbList_div.find('.cb-label').not(':first').each(function () {
+                                    var val = parseFloatCustom($(this).text().trim());
+                                    $(this).find('input').prop('checked', val >= minVal && val <= maxVal);
+                                });
+
+                                updSelectAll($th);
+                            });
+                            $extraInputs_div.append($minInput_lbl, $maxInput_lbl);
+                            $fltMen_div.css('min-height', '270px');
+                        } else if (dt === "date") {
+                            let dateObjects = uniqueValues.map(dateStr => parseDate(dateStr));
+                            let minDate = new Date(Math.min(...dateObjects));
+                            let maxDate = new Date(Math.max(...dateObjects));
+
+                            const $fromInput_lbl = $('<label>Von: <input type="date"></label>');
+                            const $toInput_lbl = $('<label>Bis: <input type="date" style="margin-left: 6px;"></label>');
+                            const $fromInput = $fromInput_lbl.find('input');
+                            const $toInput = $toInput_lbl.find('input');
+
+                            $fromInput.val(dtv(minDate));
+                            $toInput.val(dtv(maxDate));
+
+                            $fromInput.add($toInput).on('input', function () {
+                                var fromDate = new Date($fromInput.val());
+                                var toDate = new Date($toInput.val());
+                                $cbList_div.find('.cb-label').not(':first').each(function () {
+                                    var dateVal = parseDate($(this).text().trim());
+                                    $(this).find('input').prop('checked', dateVal >= fromDate && dateVal <= toDate);
+                                });
+
+                                updSelectAll($th);
+                            });
+                            $extraInputs_div.append($fromInput_lbl, $toInput_lbl);
+                            $fltMen_div.css('min-height', '270px');
+                        } else {
+                            $extraInputs_div.css('margin-top', '0');
+                        }
+                        $fltMen_div.append($extraInputs_div);
+
+                        $fltMen_div.on('keydown', function (e) {
+                            if (e.key === "Enter") {
+                                // OK Click
+                                fltBySel($table, colIndex);
+                                $fltBtn_input.removeClass('active');
+                                $fltMen_div.hide();
+                            } else if (e.key === "Escape") {
+                                // Cancel Click
+                                $fltMen_div.find('input[type=checkbox]').each(function () {
+                                    $(this).prop('checked', $(this).data('original-state'));
+                                });
+                                $fltBtn_input.removeClass('active');
+                                $fltMen_div.hide();
+                            }
+                        })
+
+                        const $searchText_input = $('<input class="search-input" type="text" placeholder="' + captions['strings'].search + '">').on('input', function () {
+                            var searchVal = $(this).val().toLowerCase();
+                            $cbList_div.find('.cb-label').not(':first').each(function () {
+                                var isChecked = $(this).text().toLowerCase().includes(searchVal);
+                                $(this).find('input').filter(':not(:disabled)').prop('checked', isChecked);
+
+                                updSelectAll($th);
+                            });
+
+                            var anyChecked = $cbList_div.find('.cb-label input:checked').length > 0;
+                            $(this).toggleClass('no-results', !anyChecked);
+                        });
+
+                        const $cbList_div = $('<div class="select-div"></div>');
+                        var all_cb_id = "cb" + colIndex + "_all";
+                        const $selectAll_lbl = $('<label class="cb-label"><input id="' + all_cb_id + '" class="cb-input" type="checkbox" checked> ' + captions['strings'].select_all + '</label>').change(function () {
+                            var isChecked = $(this).find('input').prop('checked');
+                            $cbList_div.find('.cb-label input').filter(':not(:disabled)').prop('checked', isChecked);
+                        });
+                        $cbList_div.append($selectAll_lbl);
+
+                        uniqueValues.forEach(value => {
+                            if (value === "")
+                                value = captions['strings'].select_empty;
+
+                            var cb_id = "cb" + colIndex + "_" + value.trim().replace(/[\s,]/g, '');
+                            const $checkbox_lbl = $('<label class="cb-label"><input id="' + cb_id + '" class="cb-input" type="checkbox" checked> ' + value + '</label>').change(function () {
+                                updSelectAll($th);
+                            });
+                            $cbList_div.append($checkbox_lbl);
+                        });
+
+                        //** OK / Cancel Buttons
+                        const $btnDiv = $('<div class="bottom-btns"></div>');
+                        // Besser DIV statt BUTTON?
+                        var ok_btn_id = "btn" + colIndex + "_ok";
+                        const $okBtn = $('<button id="' + ok_btn_id + '" class="bottom-btn">' + captions['strings'].ok + '</button>').click(function () {
+                            fltBySel($table, colIndex);
+                            $fltBtn_input.removeClass('active');
+                            $fltMen_div.hide();
+                        });
+                        const $cancelBtn = $('<button class="bottom-btn">' + captions['strings'].cancel + '</button>').click(function () {
+                            $fltMen_div.find('input[type=checkbox]').each(function () {
+                                $(this).prop('checked', $(this).data('original-state'));
+                            });
+                            $fltBtn_input.removeClass('active');
+                            $fltMen_div.hide();
+                        });
+                        $btnDiv.append($okBtn, $cancelBtn);
+
+                        //** Filter Button
+                        $fltMen_div.append($searchText_input, $cbList_div, $btnDiv);
+                        $fltMen_div.hide();
+
+                        //** Filter Button
+                        $fltBtn_input.click(function (e) {
+                            if ($fltMen_div.is(":visible"))
+                                return;
+
+                            e.stopPropagation();
+
+                            $('.flt-men').hide();
+                            $('.flt-btn').removeClass('active');
+
+                            $fltMen_div.find('input[type=checkbox]').each(function () {
+                                $(this).data('original-state', $(this).prop('checked'));
+                            });
+                            $fltMen_div.show().find('input').first().focus();
+
+                            $fltBtn_input.addClass('active');
+
+                            // Stelle sicher, dass das Menü innerhalb des Tables ist
+                            var bounds = $fltMen_div.offset();
+                            bounds.width = $fltMen_div.outerWidth();
+                            var fBtn_w = $fltBtn_input.outerWidth();
+
+                            // Berechne die verfügbare Breite rechts von der aktuellen TH
+                            var availableWidth = 0;
+                            var $row = $th.closest('tr');
+                            $row.children('th').slice(colIndex + 1).each(function () {
+                                availableWidth += $(this).outerWidth();
+                            });
+                            availableWidth += fBtn_w;
+
+                            // Falls nicht genug Platz rechts vorhanden ist, Menü nach links verschieben
+                            if (availableWidth < bounds.width)
+                                $fltMen_div.css('left', '-' + (bounds.width - fBtn_w) + 'px');
+                            else
+                                $fltMen_div.css('left', '0');
+
+                            var menuRect = $fltMen_div[0].getBoundingClientRect();
+                            var viewportHeight = window.innerHeight; // Höhe des sichtbaren Bereichs
+                            var spaceBelow = viewportHeight - menuRect.top - 28; // Platz unterhalb des Menüs
+
+                            if (menuRect.height > spaceBelow) {
+                                $fltMen_div.css('height', spaceBelow + 'px');
+                            }
+                        });
+                        const $fltBtn_div = $('<div class="flt-btn-div"></div>');
+                        $fltBtn_div.append($fltBtn_input, $fltMen_div);
+                        $th.append($fltBtn_div);
+                    }
+                });
+            };
+
+            function TableFilter($table) {
+                this.$table = $table;
+                this.activeFilters = {};
+                this.onFilter = function () { };
+                this.onFiltered = function () { };
+            }
+
+            TableFilter.prototype.addOnFilterListener = function (handler) {
+                this.onFilter = handler;
+            }
+
+            TableFilter.prototype.addOnFilteredListener = function (handler) {
+                this.onFiltered = handler;
+            }
+
+            TableFilter.prototype.resetFilters = function () {
+                // Alle Checkboxen zurücksetzen
+                this.$table.find('> thead > tr > th .select-div input[type=checkbox]').prop('checked', true);
+
+                // Alle Zeilen wieder einblenden
+                this.$table.find('> tbody > tr').show();
+
+                // Falls Filter-Buttons eine aktive Markierung haben, zurücksetzen
+                this.$table.find('> thead > tr > th .flt-btn').val('▾');
+
+                this.activeFilters = {};
+            };
+
+            $.fn.tableFilter.columnDataTypes = [];
+            $.fn.tableFilter.noHideRowClasses = [];
+        })(jQuery);
+    </script>
+</head>
+
+<body>
+    <h1>BBL RFID Tag Data Table</h1>
+
+    <p>1. Parse all your RFID dumps with <code>BBL_RFID_DumpsToJSON.py "path/to/your/dumps"</code> to a JSON file</p>
+    <label>2. Select your JSON file here:&nbsp;<input type="file" id="jsonFile" accept=".json" /></label>
+    <div id="tableContainer" style="margin: 10px 5px;"></div>
+
+    <p>Thanks to <a href="https://github.com/queengooborg">queengooborg</a> for collecting dumps in <a href="https://github.com/queengooborg/Bambu-Lab-RFID-Library">Bambu-Lab-RFID-Library</a></p>
+    <p>Thanks to <a href="https://github.com/Bambu-Research-Group">Bambu-Research-Group</a> for their work in <a href="https://github.com/Bambu-Research-Group/RFID-Tag-Guide">RFID-Tag-Guide</a></p>
+</body>
+
+</html>
