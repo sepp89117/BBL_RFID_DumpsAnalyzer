@@ -6,7 +6,7 @@ Read BBL RFID dumps, generate JSON, visualize in browser
 <p>2. Select your JSON file in <code>BBL_RFID Tag Data Table.html</code></p>
 
 ## Screenshot
-<img src="https://github.com/sepp89117/BBL_RFID_DumpsAnalyzer/blob/master/Screenshot_2025-06-28.png?raw=true" width="400px"><br>
+<img src="https://github.com/sepp89117/BBL_RFID_DumpsAnalyzer/blob/main/Screenshot_2025-06-28.png?raw=true" width="1000px"><br>
 
 ## Thanks
 Thanks to <a href="https://github.com/queengooborg">queengooborg</a> for collecting dumps in <a href="https://github.com/queengooborg/Bambu-Lab-RFID-Library">Bambu-Lab-RFID-Library</a><br>
