@@ -1,5 +1,5 @@
 # BBL_RFID_DumpsAnalyzer
-Read BBL RFID dumps, generate JSON, visualize in browser
+Read and parse Bambu Lab Filament RFID dumps, generate JSON, visualize data in browser
 
 ## How to use
 <p>1. Parse all your RFID dumps with <code>BBL_RFID_DumpsToJSON.py "path/to/your/dumps"</code> to a JSON file or use the JSON file from this repository</p>
