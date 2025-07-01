@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        html {            
+        html {
             font-family: Verdana, Arial, sans-serif;
             font-size: 0.8em;
         }
@@ -31,6 +31,13 @@
             padding: 2px 4px;
         }
 
+        .modern-table td.transparent-bg{
+            background-color: rgb(255, 255, 255) !important;
+            background-image: linear-gradient(45deg, rgb(239, 239, 239) 25%, rgba(239, 239, 239, 0) 25%, rgba(239, 239, 239, 0) 75%, rgb(239, 239, 239) 75%, rgb(239, 239, 239)), linear-gradient(45deg, rgb(239, 239, 239) 25%, rgba(239, 239, 239, 0) 25%, rgba(239, 239, 239, 0) 75%, rgb(239, 239, 239) 75%, rgb(239, 239, 239));
+            background-position: 0px 0px, 10px 10px;
+            background-size: 21px 21px;
+        }
+
         .modern-table tbody tr {
             background-color: white;
         }
@@ -47,6 +54,12 @@
         .modern-table tr td:last-child {
             padding-right: 10px;
         }
+
+        .modern-table tr th:not(:last-child),
+        .modern-table tr td:not(:last-child) {
+            border-right: 1px solid #dfdfdf;
+        }
+
 
         .fld-btn {
             cursor: pointer;
@@ -86,7 +99,7 @@
 
                         // apped filter
                         let noHideClasses = [];
-                        let colTypes = ['default', 'default', 'default', 'default', 'default', 'default', 'default', 'default', 'default', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'default', 'number', 'default', 'number', 'default', 'default', 'number', 'number', 'number', 'default', 'default', 'default', 'number', 'number'];
+                        let colTypes = ['default', 'default', 'default', 'default', 'default', 'default', 'default', 'default', 'default', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'default', 'number', 'default', 'number', 'default', 'default', 'number', 'number', 'number', 'default', 'default', 'default', 'default', 'number', 'default'];
                         $table = $('#vTable');
                         $table.tableFilter(colTypes, noHideClasses);
                     } catch (err) {
@@ -97,7 +110,6 @@
                 reader.readAsText(file);
             });
         });
-
 
         function renderTable(data) {
             const container = document.getElementById("tableContainer");
@@ -120,7 +132,9 @@
             columns.forEach((col, index) => {
                 const th = document.createElement("th");
                 const label = document.createElement("span");
+
                 label.textContent = col;
+                th.title = col;
 
                 const toggleBtn = document.createElement("input");
                 toggleBtn.type = "button";
@@ -149,9 +163,22 @@
                 const tr = document.createElement("tr");
                 columns.forEach(col => {
                     const td = document.createElement("td");
-                    if (col === "color_rgba" || col === "second_color_rgba") {
-                        td.style.backgroundColor = entry[col];
-                        td.title = entry[col];
+                    if (col === "Color RGBA" || col === "Second Color RGBA") {
+                        const color = entry[col];
+                        td.style.backgroundColor = color;
+                        td.title = color;
+
+                        const match = color.match(/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\)$/);
+                        if (match[4] && parseInt(match[4]) === 0) {
+                            td.classList.add("transparent-bg");
+                            // Transparent Background Pattern
+                            /* td.style.backgroundImage = `
+                                linear-gradient(45deg,#efefef 25%,rgba(239,239,239,0) 25%, rgba(239,239,239,0) 75%,#efefef 75%,#efefef),
+                                linear-gradient(45deg,#efefef 25%,rgba(239,239,239,0) 25%, rgba(239,239,239,0) 75%,#efefef 75%,#efefef)`;
+                            td.style.backgroundPosition = "0 0,10px 10px";
+                            td.style.backgroundSize = "21px 21px";
+                            td.style.backgroundColor = "#fff"; */
+                        }
                     } else {
                         td.textContent = entry[col] != null ? entry[col] : "";
                     }
@@ -934,8 +961,10 @@
     <label>2. Select your JSON file here:&nbsp;<input type="file" id="jsonFile" accept=".json" /></label>
     <div id="tableContainer" style="margin: 10px 5px;"></div>
 
-    <p>Thanks to <a href="https://github.com/queengooborg">queengooborg</a> for collecting dumps in <a href="https://github.com/queengooborg/Bambu-Lab-RFID-Library">Bambu-Lab-RFID-Library</a></p>
-    <p>Thanks to <a href="https://github.com/Bambu-Research-Group">Bambu-Research-Group</a> for their work in <a href="https://github.com/Bambu-Research-Group/RFID-Tag-Guide">RFID-Tag-Guide</a></p>
+    <p>Thanks to <a href="https://github.com/queengooborg">queengooborg</a> for collecting dumps in <a
+            href="https://github.com/queengooborg/Bambu-Lab-RFID-Library">Bambu-Lab-RFID-Library</a></p>
+    <p>Thanks to <a href="https://github.com/Bambu-Research-Group">Bambu-Research-Group</a> for their work in <a
+            href="https://github.com/Bambu-Research-Group/RFID-Tag-Guide">RFID-Tag-Guide</a></p>
 </body>
 
 </html>
