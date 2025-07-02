@@ -36,14 +36,14 @@ def parse_rfid_tag(file_path, extract_bin):
             data = f.read()
 
         if not len(data) == 1024:
-            print(f"Skip file {file_path} due to invalid length.")
+            # print(f"[I] Skip file {file_path} due to invalid length.")
             return None
 
         block = lambda n: n * 16
         
         acl = data[block(3) + 6:block(3) + 10]
         if not acl == b'\x87\x87\x87\x69':
-            print(f"Skip file {file_path} due to invalid ACL.")
+            print(f"[E] Skip file {file_path} due to invalid ACL.")
             return None
         
         # List of blocks that should be empty
@@ -51,7 +51,7 @@ def parse_rfid_tag(file_path, extract_bin):
         all_empty = True
         for block_index in blocks_to_check:
             if not is_block_empty(data, block_index):
-                print(f"Block {block_index} is not empty!")
+                print(f"[D] Block {block_index} is not empty!")
                 all_empty = False
 
         get_str = lambda offset, length: data[offset:offset+length].split(b'\x00')[0].decode('utf-8', errors='ignore').strip()
@@ -87,7 +87,7 @@ def parse_rfid_tag(file_path, extract_bin):
         if extract_bin:
             base_path = os.path.dirname(file_path)
             blocks = [data[i:i+16] for i in range(0, len(data), 16)]
-            data_bytes = extract_blocks(blocks, 0, 41)
+            data_bytes = extract_blocks(blocks, 0, 38)
             sig_bytes = extract_blocks(blocks, 42, 62)
             with open(os.path.join(base_path, f"{tag_uid}_data.bin"), "wb") as f:
                 f.write(data_bytes)
@@ -131,7 +131,7 @@ def parse_rfid_tag(file_path, extract_bin):
         }
 
     except Exception as e:
-        print(f"Error while parsing of {file_path}: {e}")
+        print(f"[E] Error while parsing of {file_path}: {e}")
         return None
 
 def find_all_bin_files(root_dir):
@@ -153,7 +153,7 @@ def main():
     # G:\BambuFilaments\Dumps --extract-bin
 
     all_bins = find_all_bin_files(args.input_dir)
-    print(f"{len(all_bins)} files found.")
+    print(f"[I] {len(all_bins)} files found.")
 
     seen_uids = set()
     parsed_data = []
@@ -164,14 +164,15 @@ def main():
             if uid:
                 if uid not in seen_uids:
                     parsed_data.append(result)
-                    seen_uids.add(uid)                    
+                    seen_uids.add(uid)
+                    print(f"[I] Parsed file {file_path} with tag UID {uid}.")
                 elif uid in seen_uids:
-                    print(f"The file {file_path} was identified as a duplicate based on the tag UID.")
+                    print(f"[I] The file {file_path} was identified as a duplicate based on the tag UID {uid}.")
 
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(parsed_data, f, indent=2, ensure_ascii=False)
 
-    print(f"Done! {len(parsed_data)} Tags written in {args.output} .")
+    print(f"[I] Done! {len(parsed_data)} Tags written in {args.output} .")
 
 if __name__ == "__main__":
     main()
